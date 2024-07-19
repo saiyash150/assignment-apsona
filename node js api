@@ -1,0 +1,110 @@
+//node js api 
+//Declare the installed modules express and body-parser.
+// app.js
+
+const express = require('express')
+const bodyParser = require('body-parser')
+import {Redirect} from 'react-router-dom'
+const path = require('path')
+const bcrypt = require('bcrypt')
+import Cookies from 'js-cookie'
+
+const sampleUsers = [
+  {userName: 'rahul', password: 'rahul@2021'},
+  {userName: 'sai', password: 'sai@yash'},
+]
+
+const notes = [
+  {
+    noteId: 1,
+    noteContent: '          Add your important notes here.',
+  },
+]
+
+const app = express()
+
+app.use(
+  bodyParser.urlencoded({
+    extended: true,
+  }),
+)
+app.use(express.static(path.join(__dirname, 'public')))
+
+//sample user login  api
+
+app.post('/login/', async (request, response) => {
+  const {username, password} = request.body
+  const hashedPassword = await bcrypt.hash(request.body.password, 10)
+  const selectUser = sampleUsers.map(each => {
+    if (each.userName === username) {
+      return each
+    }
+  })
+
+  if (selectUser[0] === undefined) {
+    response.status = 400
+    response.send('Unauthenticated user! please register')
+  } else {
+    const isPasswordMatched = await bcrypt.compare(
+      password,
+      selectUser[0].password,
+    )
+    if (isPasswordMatched) {
+      const payload = {username: username}
+      const jwtToken = jwt.sign(payload, 'MY_SECRET_TOKEN')
+      response.send({jwtToken})
+      Cookies.set('jwt_token', jwtToken, {expires: 10})
+    } else {
+      response.status = 400
+      response.send('Wrong password')
+    }
+  }
+})
+
+app.post('/', (req, res) => {
+  const noteContent = req.body.noteContent
+  const noteId = notes.length + 1
+
+  notes.push({
+    noteId: noteId,
+    noteContent: noteContent,
+  })
+
+  res.render('home', {
+    data: notes,
+  })
+})
+
+app.post('/update', (req, res) => {
+  var noteId = req.body.noteId
+  var noteContent = req.body.noteContent
+
+  notes.forEach(note => {
+    if (note.noteId == noteId) {
+      note.noteContent = noteContent
+    }
+  })
+  res.render('home', {
+    data: notes,
+  })
+})
+
+app.post('/delete', (req, res) => {
+  var noteId = req.body.noteId
+
+  var j = 0
+  notes.forEach(note => {
+    j = j + 1
+    if (note.noteId == noteId) {
+      notes.splice(j - 1, 1)
+    }
+  })
+
+  res.render('home', {
+    data: notes,
+  })
+})
+
+app.listen(3000, (req, res) => {
+  console.log('App is running on port 3000')
+})
